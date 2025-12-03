@@ -5,6 +5,7 @@ TagManager:
   serializedVersion: 3
   tags:
   - Fence
+  - HitBox
   layers:
   - Default
   - TransparentFX
@@ -13,11 +14,11 @@ TagManager:
   - Water
   - UI
   - Obstacles
-  - 
-  - 
-  - 
-  - 
-  - 
+  - Player
+  - Enemy
+  - PlayerHitBox
+  - EnemyHitBox
+  - VisionSensor
   - 
   - 
   - 

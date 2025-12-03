@@ -9,20 +9,23 @@ public class ParkourController : MonoBehaviour
     private EnvironmentScanner environmentScanner;
     private Animator animator;
     private PlayerController playerController;
+    private MeeleFighter meeleFighter;
 
     private bool inAction;
+    public bool InAction => inAction;
 
     void Awake()
     {
         environmentScanner = GetComponent<EnvironmentScanner>();
         animator = GetComponent<Animator>();
         playerController = GetComponent<PlayerController>();
+        meeleFighter = GetComponent<MeeleFighter>();
     }
 
     void Update()
     {
         //按下空格键，且当前不在动作中
-        if(Input.GetKeyDown(KeyCode.Space) && !inAction)
+        if(Input.GetKeyDown(KeyCode.Space) && !inAction && !meeleFighter.InAction)
         {
             var hitDate = environmentScanner.ObstacleCheck();
             if (hitDate.forwardHitFound)

@@ -15,6 +15,7 @@ public class PlayerController : MonoBehaviour
     private Quaternion targetRotation;
     private Animator animator;
     private CharacterController characterController;
+    private MeeleFighter meeleFighter;
 
     private bool isGrounded;
     private bool hasControl;
@@ -31,10 +32,18 @@ public class PlayerController : MonoBehaviour
         cameraController = Camera.main.GetComponent<CameraController>();
         animator = GetComponent<Animator>();
         characterController = GetComponent<CharacterController>();
+        meeleFighter = GetComponent<MeeleFighter>();
     }
 
     void Update()
     {
+        //当攻击正在进行时，停止人物的逻辑
+        if (meeleFighter.InAction)
+        {
+            animator.SetFloat("moveAmount", 0);
+            return;
+        }
+
         float h = Input.GetAxis("Horizontal");
         float v = Input.GetAxis("Vertical");
 
