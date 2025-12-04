@@ -17,15 +17,17 @@ public class MeeleFighter : MonoBehaviour
     private ParkourController parkourController;
     
     private bool inAction = false;
-    private AttackState attackState;
     private bool doCombo;
     private int comboCount = 0;
+    private float Fov = 180f;
     
     public bool InAction => inAction;
+    public AttackState AttackState { get; private set; }
+    public bool InCounter { get; set; } = false;
 
     void Awake()
     {
-        attackState = AttackState.Idle;
+        AttackState = AttackState.Idle;
 
         animator = GetComponent<Animator>();
         parkourController = GetComponent<ParkourController>();
@@ -52,11 +54,12 @@ public class MeeleFighter : MonoBehaviour
     /// </summary>
     public void TryToAttack()
     {
-        if (!inAction && !parkourController.InAction)
+        //敌人没有跑酷系统
+        if (!inAction && (parkourController == null || !parkourController.InAction))
         {
             StartCoroutine(Attack());
         }
-        else if ((attackState == AttackState.Impact || attackState == AttackState.Cooldown) && !parkourController.InAction)
+        else if ((AttackState == AttackState.Impact || AttackState == AttackState.Cooldown) && (parkourController == null || !parkourController.InAction))
         {
             doCombo = true;
         }
@@ -68,7 +71,7 @@ public class MeeleFighter : MonoBehaviour
         //这里不能用跑酷系统时取消人物控制的逻辑 因为这会取消人物CharacterController，而这里只想取消人物移动
         //playerController.SetControl(false);
 
-        attackState = AttackState.Windup;
+        AttackState = AttackState.Windup;
 
         //攻击进行检测的开始与结束时间（归一）
         // float impactStartTime = 0.33f;
@@ -86,25 +89,28 @@ public class MeeleFighter : MonoBehaviour
             timer += Time.deltaTime;
             float normalizedTime = timer / animState.length;
 
-            if (attackState == AttackState.Windup)
+            if (AttackState == AttackState.Windup)
             {
+                //被反击了就退出
+                if(InCounter) break;
+
                 if(normalizedTime >= attacks[comboCount].ImpactStartTime)
                 {
-                    attackState = AttackState.Impact;
+                    AttackState = AttackState.Impact;
                     //激活武器触发器
                     EnableHitbox(attacks[comboCount]);
                 }
             }
-            else if(attackState == AttackState.Impact)
+            else if(AttackState == AttackState.Impact)
             {
                 if(normalizedTime >= attacks[comboCount].ImpactEndTime)
                 {
-                    attackState = AttackState.Cooldown;
+                    AttackState = AttackState.Cooldown;
                     //失活武器触发器
                     DisableAllHitboxes();
                 }
             }
-            else if (attackState == AttackState.Cooldown)
+            else if (AttackState == AttackState.Cooldown)
             {
                 //TODO: 处理连击的逻辑
                 if (doCombo)
@@ -121,7 +127,7 @@ public class MeeleFighter : MonoBehaviour
             yield return null;
         }
 
-        attackState = AttackState.Idle;
+        AttackState = AttackState.Idle;
 
         //攻击重头开始
         comboCount = 0;
@@ -162,6 +168,52 @@ public class MeeleFighter : MonoBehaviour
 
         //等待80%的时间即可再次播放
         yield return new WaitForSeconds(animState.length * 0.8f);
+
+        inAction = false;
+    }
+
+    /// <summary>
+    /// 玩家进行反击 敌人触发被反击死亡动画
+    /// </summary>
+    /// <param name="opponent"></param>
+    /// <returns></returns>
+    public IEnumerator PerformCounterAttack(EnemyController opponent)
+    {
+        inAction = true;
+
+        InCounter = true;
+        opponent.Fighter.InCounter = true;
+        opponent.ChangeState(EnemyStates.Dead);
+
+        //玩家和敌人要面对面
+        var dispVec = opponent.transform.position - transform.position;
+        dispVec.y = 0;
+        transform.rotation = Quaternion.LookRotation(dispVec);
+        opponent.transform.rotation = Quaternion.LookRotation(-dispVec);
+
+        //玩家移动到敌人身前1m
+        var targetPos = opponent.transform.position - dispVec.normalized * 1f;
+
+        animator.CrossFade("CounterAttack", 0.2f);
+        opponent.Animator.CrossFade("CounterAttackVictim", 0.2f);
+        yield return null;
+
+        //战斗系统的动画在1层
+        var animState = animator.GetNextAnimatorStateInfo(1);
+        
+        float timer = 0f;
+        while (timer <= animState.length)
+        {
+            //玩家移动到targetPos的位置，避免玩家与敌人位置重叠
+            transform.position = Vector3.Lerp(transform.position, targetPos, 5 * Time.deltaTime);
+
+            yield return null;
+
+            timer += Time.deltaTime;
+        }
+
+        InCounter = false;
+        opponent.Fighter.InCounter = false;
 
         inAction = false;
     }
@@ -210,4 +262,25 @@ public class MeeleFighter : MonoBehaviour
         if(leftFootCollider!=null)
             leftFootCollider.enabled = false;
     }
+
+    /// <summary>
+    /// 敌人是否在玩家视野范围内 在才可以反击
+    /// </summary>
+    /// <returns></returns>
+    public bool InVisionToCounter(EnemyController opponent)
+    {
+        var dispVec = opponent.transform.position - transform.position;
+        var angle = Vector3.Angle(transform.forward, dispVec);
+
+        if(angle <= Fov / 2)
+        {
+            return true;
+        }
+        return false;
+    }
+
+    public List<AttackData> Attacks => attacks;
+
+    //武器处于抬起状态时并且攻击为第一次攻击时 玩家可以进行反击
+    public bool IsCounterable => AttackState == AttackState.Windup && comboCount == 0;
 }

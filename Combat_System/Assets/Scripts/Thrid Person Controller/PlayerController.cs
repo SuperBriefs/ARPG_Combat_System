@@ -40,7 +40,9 @@ public class PlayerController : MonoBehaviour
         //当攻击正在进行时，停止人物的逻辑
         if (meeleFighter.InAction)
         {
-            animator.SetFloat("moveAmount", 0);
+            //玩家进行反击的时候 角度的旋转得记录下来
+            targetRotation = transform.rotation;
+            animator.SetFloat("forwardSpeed", 0);
             return;
         }
 
@@ -87,7 +89,7 @@ public class PlayerController : MonoBehaviour
 
         //第三个参数：dampTime：阻尼时间，控制变化的平滑程度（越大越慢）。
         //第四个参数：deltaTime：通常传入 Time.deltaTime，确保平滑计算与帧率无关。
-        animator.SetFloat("moveAmount", moveAmount, 0.2f, Time.deltaTime);
+        animator.SetFloat("forwardSpeed", moveAmount, 0.2f, Time.deltaTime);
     }
 
     /// <summary>
@@ -112,7 +114,7 @@ public class PlayerController : MonoBehaviour
         //如果当前人物无法控制 就停止一切运动和旋转
         if (!hasControl)
         {
-            animator.SetFloat("moveAmount", 0);
+            animator.SetFloat("forwardSpeed", 0);
             targetRotation = transform.rotation;
         }
     }
