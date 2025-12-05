@@ -46,13 +46,26 @@ public class EnemyManager : MonoBehaviour
         if (enemiesInRange.Contains(enemy))
         {
             enemiesInRange.Remove(enemy);
+
+            //去掉敌人高光 找到新敌人显示高光
+            if(enemy == player.TargetEnemy)
+            {
+                enemy.MeshHighlighter?.HighlightMesh(false);
+                player.TargetEnemy = GetClosesEnemyToDirection(player.GetTargetingDir());
+                player.TargetEnemy?.MeshHighlighter?.HighlightMesh(true);
+            }
         }
     }
 
     float timer = 0;
     void Update()
     {
-        if(enemiesInRange.Count == 0) return;
+        if(enemiesInRange.Count == 0)
+        {
+            //玩家范围内没有可以攻击的敌人 就取消攻击模式
+            player.CombatMode = false;
+            return;
+        }
 
         //查找当前是否有在攻击的敌人
         bool hasAttackingEnemy = false;
@@ -90,15 +103,15 @@ public class EnemyManager : MonoBehaviour
         {
             timer = 0;
             //离玩家最近的可攻击的敌人
-            var closestEnemy = GetClosesEnemyToPlayerDir();
-            if(closestEnemy != null && closestEnemy != player.targetEnemy)
+            var closestEnemy = GetClosesEnemyToDirection(player.GetTargetingDir());
+            if(closestEnemy != null && closestEnemy != player.TargetEnemy)
             {
                 //先取消上一次最近的敌人的高光
-                var prevEnemy = player.targetEnemy;
+                var prevEnemy = player.TargetEnemy;
                 prevEnemy?.MeshHighlighter.HighlightMesh(false);
 
-                player.targetEnemy = closestEnemy;
-                player.targetEnemy?.MeshHighlighter.HighlightMesh(true);
+                player.TargetEnemy = closestEnemy;
+                player.TargetEnemy?.MeshHighlighter.HighlightMesh(true);
             }
         }
 
@@ -111,8 +124,8 @@ public class EnemyManager : MonoBehaviour
     /// <returns></returns>
     private EnemyController SelectEnemyForEnemy()
     {
-        //返回处于战斗运动状态最长的敌人 且 当前敌人得有目标
-        return enemiesInRange.OrderByDescending(e => e.CombatMovementTimer).FirstOrDefault(e => e.Target != null);
+        //返回处于战斗运动状态最长的敌人 且 当前敌人得有目标并且处于CombatMovement状态
+        return enemiesInRange.OrderByDescending(e => e.CombatMovementTimer).FirstOrDefault(e => e.Target != null && e.IsInState(EnemyStates.CombatMovement));
     }
 
     /// <summary>
@@ -128,10 +141,8 @@ public class EnemyManager : MonoBehaviour
     /// 得到离玩家最近的敌人
     /// </summary>
     /// <returns></returns>
-    public EnemyController GetClosesEnemyToPlayerDir()
+    public EnemyController GetClosesEnemyToDirection(Vector3 direction)
     {
-        var targetingDir = player.GetTargetingDir();
-
         float minDistance = Mathf.Infinity;
         EnemyController closestEnemy = null;
 
@@ -141,7 +152,7 @@ public class EnemyManager : MonoBehaviour
             vecToEnemy.y = 0;
 
             //|v| * sinθ
-            float angle = Vector3.Angle(targetingDir, vecToEnemy);
+            float angle = Vector3.Angle(direction, vecToEnemy);
             float distance = vecToEnemy.magnitude * Mathf.Sin(angle * Mathf.Deg2Rad);
 
             if(minDistance > distance) 

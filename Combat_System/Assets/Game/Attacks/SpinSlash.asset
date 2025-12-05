@@ -10,14 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 303587496a1918a4bbc42c1a86eb95f9, type: 3}
-  m_Name: SpartaKick
+  m_Name: SpinSlash
   m_EditorClassIdentifier: 
-  <AnimName>k__BackingField: SpartaKick
-  <HitboxToUse>k__BackingField: 3
-  <ImpactStartTime>k__BackingField: 0.36
-  <ImpactEndTime>k__BackingField: 0.56
+  <AnimName>k__BackingField: SpinSlash
+  <HitboxToUse>k__BackingField: 4
+  <ImpactStartTime>k__BackingField: 0.54
+  <ImpactEndTime>k__BackingField: 0.84
   <MoveToTarget>k__BackingField: 1
-  <DistanceFromTarget>k__BackingField: 0.9
-  <MaxMoveDistance>k__BackingField: 0.8
+  <DistanceFromTarget>k__BackingField: 0.5
+  <MaxMoveDistance>k__BackingField: 3
   <MoveStartTime>k__BackingField: 0
-  <MoveEndTime>k__BackingField: 0.44
+  <MoveEndTime>k__BackingField: 0.8

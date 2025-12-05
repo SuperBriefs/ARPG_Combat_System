@@ -993,7 +993,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9753606cae720a3458706001d957e3bf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  targetEnemy: {fileID: 0}
 --- !u!114 &846688438
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1011,6 +1010,10 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 69ac952fd7818b64384e596b44f39483, type: 2}
   - {fileID: 11400000, guid: ab3d0695873a7064b94da72a83836822, type: 2}
   - {fileID: 11400000, guid: 980af43c9f0c71241a30d37c6dcbbd34, type: 2}
+  longRangeAttacks:
+  - {fileID: 11400000, guid: c3d215bd32371ed4ba5d510f972c8c79, type: 2}
+  longRangeAttackThreshold: 1.5
+  rotationSpeed: 500
 --- !u!1 &912608976
 GameObject:
   m_ObjectHideFlags: 0

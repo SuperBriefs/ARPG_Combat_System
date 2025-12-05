@@ -24,12 +24,25 @@ public class CombatMovementState : State<EnemyController>
 
         enemy.NavAgent.stoppingDistance = distanceToStand;
         enemy.CombatMovementTimer = 0;
+        
+        enemy.Animator.SetBool("combatMode", true);
     }
 
     public override void Execute()
     {
+        //受击后先找到追击目标 避免enemy.Target为null导致报错
+        if(enemy.Target == null)
+        {
+            enemy.Target = enemy.FindTarget();
+            if(enemy.Target == null)
+            {
+                enemy.ChangeState(EnemyStates.Idle);
+                return;
+            }
+        }
+
         // +adjustDistanceThreashold 是为了预留一些空间 因为玩家一超过distanceToStand距离，敌人直接就追击是不自然的
-        if(Vector3.Distance(enemy.Target.transform.position,  enemy.transform.position) > distanceToStand + adjustDistanceThreashold)
+        if(Vector3.Distance(enemy.Target.transform.position, enemy.transform.position) > distanceToStand + adjustDistanceThreashold)
         {
             StartChase();
         }
@@ -98,8 +111,6 @@ public class CombatMovementState : State<EnemyController>
     {
         state = AICombatStates.Idle;
         timer = Random.Range(idleTimeRange.x, idleTimeRange.y);
-        
-        enemy.Animator.SetBool("combatMode", true);
     }
 
     /// <summary>
@@ -108,7 +119,6 @@ public class CombatMovementState : State<EnemyController>
     private void StartChase()
     {
         state = AICombatStates.Chase;
-        enemy.Animator.SetBool("combatMode", false);
     }
 
     /// <summary>

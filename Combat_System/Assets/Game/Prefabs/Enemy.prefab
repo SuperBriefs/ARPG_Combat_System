@@ -2541,6 +2541,7 @@ GameObject:
   - component: {fileID: 842629075822308366}
   - component: {fileID: 3356394802161530760}
   - component: {fileID: 7496163073736959842}
+  - component: {fileID: 4504203072556863187}
   - component: {fileID: 7883408409654149521}
   - component: {fileID: 7722672597636588705}
   m_Layer: 8
@@ -2634,6 +2635,7 @@ MonoBehaviour:
   attacks:
   - {fileID: 11400000, guid: 69ac952fd7818b64384e596b44f39483, type: 2}
   - {fileID: 11400000, guid: ab3d0695873a7064b94da72a83836822, type: 2}
+  rotationSpeed: 500
 --- !u!114 &2635986213176489378
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2716,6 +2718,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f4ca3d6e71219e4487660c3db6806a4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &4504203072556863187
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7449851611452739038}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fd8c42f7a15560a45bd8549dff31a071, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  stunnTime: 0.5
 --- !u!195 &7883408409654149521
 NavMeshAgent:
   m_ObjectHideFlags: 0

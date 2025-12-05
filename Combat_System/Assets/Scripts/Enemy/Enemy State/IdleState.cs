@@ -7,22 +7,17 @@ public class IdleState : State<EnemyController>
     public override void Enter(EnemyController owner)
     {
         enemy = owner;
+        
+        enemy.Animator.SetBool("combatMode", false);
     }
 
     public override void Execute()
     {
-        //遍历范围内所有的可追目标 选取在视角内容的目标追击
-        foreach(var target in enemy.TargetsInRange)
+        //选取在视角内最近的目标追击
+        enemy.Target = enemy.FindTarget();
+        if(enemy.Target != null)
         {
-            var vecToTarget = target.transform.position - transform.position;
-            var angle = Vector3.Angle(transform.forward, vecToTarget);
-
-            if(angle <= enemy.Fov / 2)
-            {
-                enemy.Target = target;
-                enemy.ChangeState(EnemyStates.CombatMovement);
-                break;
-            }
+            enemy.ChangeState(EnemyStates.CombatMovement);
         }
     }
 

@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -9,6 +10,12 @@ public class MeeleFighter : MonoBehaviour
     [SerializeField] private GameObject sword;
 
     [SerializeField] private List<AttackData> attacks;
+    [SerializeField] private List<AttackData> longRangeAttacks;
+    [SerializeField] private float longRangeAttackThreshold = 1.5f;
+    [SerializeField] private float rotationSpeed = 500;
+
+    public event Action<MeeleFighter> OnGoHit;
+    public event Action OnHitComplete;
 
     private BoxCollider swordCollider;
     private SphereCollider leftHandCollider,rightHandCollider,leftFootCollider,rightFootCollider;
@@ -24,6 +31,7 @@ public class MeeleFighter : MonoBehaviour
     public bool InAction => inAction;
     public AttackState AttackState { get; private set; }
     public bool InCounter { get; set; } = false;
+    public bool IsTakingHit { get; private set; } = false;
 
     void Awake()
     {
@@ -52,12 +60,12 @@ public class MeeleFighter : MonoBehaviour
     /// <summary>
     /// 尝试进行攻击
     /// </summary>
-    public void TryToAttack()
+    public void TryToAttack(MeeleFighter target = null)
     {
         //敌人没有跑酷系统
         if (!inAction && (parkourController == null || !parkourController.InAction))
         {
-            StartCoroutine(Attack());
+            StartCoroutine(Attack(target));
         }
         else if ((AttackState == AttackState.Impact || AttackState == AttackState.Cooldown) && (parkourController == null || !parkourController.InAction))
         {
@@ -65,19 +73,54 @@ public class MeeleFighter : MonoBehaviour
         }
     }
 
-    IEnumerator Attack()
+    MeeleFighter currTarget;
+    IEnumerator Attack(MeeleFighter target = null)
     {
         inAction = true;
         //这里不能用跑酷系统时取消人物控制的逻辑 因为这会取消人物CharacterController，而这里只想取消人物移动
         //playerController.SetControl(false);
 
+        //设置单一攻击目标 每次攻击只能打到一个敌人
+        currTarget = target;
         AttackState = AttackState.Windup;
+
+        var attack = attacks[comboCount];
+        Vector3 startPos = transform.position;
+        Vector3 targetPos = Vector3.zero;
+        //玩家有攻击目标时 确定目标方向 进行远距离攻击
+        var attackDir = transform.forward;
+        if(target != null)
+        {
+            var vecToTarget = target.transform.position - transform.position;
+            vecToTarget.y = 0;
+
+            attackDir = vecToTarget.normalized;
+            float distance = vecToTarget.magnitude - attack.DistanceFromTarget;
+
+            //大于longRangeAttackThreshold距离 进行远距离攻击
+            if(distance > longRangeAttackThreshold && longRangeAttacks.Count > 0)
+            {
+                attack = longRangeAttacks[0];
+            }
+
+            if(attack.MoveToTarget)
+            {
+                if(distance <= attack.MaxMoveDistance)
+                {
+                    targetPos = target.transform.position - attackDir * attack.DistanceFromTarget;
+                }
+                else
+                {
+                    targetPos = startPos + attackDir * attack.DistanceFromTarget;
+                }
+            }
+        }
 
         //攻击进行检测的开始与结束时间（归一）
         // float impactStartTime = 0.33f;
         // float impactEndTime = 0.55f;
 
-        animator.CrossFade(attacks[comboCount].AnimName, 0.2f);
+        animator.CrossFade(attack.AnimName, 0.2f);
         yield return null;
 
         //战斗系统的动画在1层
@@ -86,24 +129,40 @@ public class MeeleFighter : MonoBehaviour
         float timer = 0f;
         while (timer <= animState.length)
         {
+            //攻击时受击 直接退出播放动画时长的循环
+            if(IsTakingHit) break;
+
             timer += Time.deltaTime;
             float normalizedTime = timer / animState.length;
+
+            //玩家进行远距离攻击时 向敌人方向进攻
+            if(target != null && attack.MoveToTarget)
+            {
+                float percTime = (normalizedTime - attack.MoveStartTime) / (attack.MoveEndTime - attack.MoveStartTime);
+                transform.position = Vector3.Lerp(startPos, targetPos, percTime);
+            }
+
+            //转向攻击方向
+            if(attackDir != null)
+            {
+                transform.rotation = Quaternion.Lerp(transform.rotation, Quaternion.LookRotation(attackDir), rotationSpeed * Time.deltaTime);
+            }
 
             if (AttackState == AttackState.Windup)
             {
                 //被反击了就退出
                 if(InCounter) break;
 
-                if(normalizedTime >= attacks[comboCount].ImpactStartTime)
+                if(normalizedTime >= attack.ImpactStartTime)
                 {
                     AttackState = AttackState.Impact;
                     //激活武器触发器
-                    EnableHitbox(attacks[comboCount]);
+                    EnableHitbox(attack);
                 }
             }
             else if(AttackState == AttackState.Impact)
             {
-                if(normalizedTime >= attacks[comboCount].ImpactEndTime)
+                if(normalizedTime >= attack.ImpactEndTime)
                 {
                     AttackState = AttackState.Cooldown;
                     //失活武器触发器
@@ -119,7 +178,7 @@ public class MeeleFighter : MonoBehaviour
                     comboCount = (comboCount + 1) % attacks.Count;
 
                     //可以进行连击的话就再开一个攻击协程 并 结束当前的协程
-                    StartCoroutine(Attack());
+                    StartCoroutine(Attack(target));
                     yield break;
                 }
             }
@@ -133,6 +192,7 @@ public class MeeleFighter : MonoBehaviour
         comboCount = 0;
 
         inAction = false;
+        currTarget = null;
     }
 
     void OnTriggerEnter(Collider other)
@@ -140,25 +200,54 @@ public class MeeleFighter : MonoBehaviour
         //敌人检测到玩家的攻击(玩家的武器 敌人)
         if(other.gameObject.layer == LayerMask.NameToLayer("PlayerHitBox") && 
            this.gameObject.layer == LayerMask.NameToLayer("Enemy") &&
-           !inAction)
+           !IsTakingHit /*在攻击的时候可以受击*/)
         {
-            StartCoroutine(PlayHitReaction());
+            //敌人只能攻击单一玩家
+            AttackOtherSide(other);
         }
 
         //玩家检测敌人的攻击(敌人的武器 玩家)
         if(other.gameObject.layer == LayerMask.NameToLayer("EnemyHitBox") && 
            this.gameObject.layer == LayerMask.NameToLayer("Player") &&
-           !inAction)
+           !IsTakingHit &&
+           !InCounter /*玩家反击时，不会受击*/)
         {
-            StartCoroutine(PlayHitReaction());
+            //玩家只能攻击单一敌人
+            AttackOtherSide(other);
         }
     }
 
-    IEnumerator PlayHitReaction()
+    /// <summary>
+    /// 受击状态 且 每次攻击受击的只有一个角色
+    /// </summary>
+    /// <param name="other"></param>
+    private void AttackOtherSide(Collider other)
+    {
+        var attacker = other.GetComponentInParent<MeeleFighter>();
+        if(attacker.currTarget != this)
+        {
+            return;
+        }
+
+        StartCoroutine(PlayHitReaction(attacker));
+    }
+
+    IEnumerator PlayHitReaction(MeeleFighter attacker)
     {
         inAction = true;
         //这里不能用跑酷系统时取消人物控制的逻辑 因为这会取消人物CharacterController，而这里只想取消人物移动
         //playerController.SetControl(false);
+
+        IsTakingHit = true;
+
+        //受击转向攻击者
+        var dispVec = attacker.transform.position - transform.position;
+        dispVec.y = 0;
+        transform.rotation = Quaternion.LookRotation(dispVec);
+
+        //进入受击后的击晕状态 敌人执行
+        //进入受击后切换目标 玩家执行
+        OnGoHit?.Invoke(attacker);
 
         animator.CrossFade("SwordImpact", 0.2f);
         yield return null;
@@ -169,7 +258,11 @@ public class MeeleFighter : MonoBehaviour
         //等待80%的时间即可再次播放
         yield return new WaitForSeconds(animState.length * 0.8f);
 
+        //玩家攻击结束后 敌人退出击晕状态
+        OnHitComplete?.Invoke();
+
         inAction = false;
+        IsTakingHit = false;
     }
 
     /// <summary>

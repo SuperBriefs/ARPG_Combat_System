@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
-public enum EnemyStates { Idle, CombatMovement, Attack, RetreatAfterAttack, Dead }
+public enum EnemyStates { Idle, CombatMovement, Attack, RetreatAfterAttack, Dead, GettingHit }
 
 public class EnemyController : MonoBehaviour
 {
@@ -38,9 +38,12 @@ public class EnemyController : MonoBehaviour
         stateDic[EnemyStates.Attack] = GetComponent<EnemyAttackState>();
         stateDic[EnemyStates.RetreatAfterAttack] = GetComponent<RetreatAfterAttackState>();
         stateDic[EnemyStates.Dead] = GetComponent<DeadState>();
+        stateDic[EnemyStates.GettingHit] = GetComponent<GettingHitState>();
 
         StateMachine = new StateMachine<EnemyController>(this);
         StateMachine.ChangeState(stateDic[EnemyStates.Idle]);
+
+        Fighter.OnGoHit += (MeeleFighter attacker) => ChangeState(EnemyStates.GettingHit);;
     }
 
     /// <summary>
@@ -81,5 +84,26 @@ public class EnemyController : MonoBehaviour
         Animator.SetFloat("strafeSpeed", strafeSpeed, 0.2f, Time.deltaTime);
 
         prevPos = transform.position;
+    }
+
+    /// <summary>
+    /// 获得范围内可以攻击的目标
+    /// </summary>
+    /// <returns></returns>
+    public MeeleFighter FindTarget()
+    {
+        //遍历范围内所有的可追目标 选取在视角内容的目标追击
+        foreach(var target in TargetsInRange)
+        {
+            var vecToTarget = target.transform.position - transform.position;
+            var angle = Vector3.Angle(transform.forward, vecToTarget);
+
+            if(angle <= Fov / 2)
+            {
+                return target;
+            }
+        }
+
+        return null;
     }
 }

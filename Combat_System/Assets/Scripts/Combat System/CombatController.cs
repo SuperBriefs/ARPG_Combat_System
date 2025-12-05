@@ -2,7 +2,37 @@ using UnityEngine;
 
 public class CombatController : MonoBehaviour
 {
-    public EnemyController targetEnemy;
+    private EnemyController targetEnemy;
+    public EnemyController TargetEnemy
+    {
+        get => targetEnemy;
+        set
+        {
+            targetEnemy = value;
+
+            //没有目标敌人就始终无法进入战斗模式
+            if(targetEnemy == null)
+            {
+                combatMode = false;
+            }
+        }
+    }
+
+    private bool combatMode;
+    public bool CombatMode
+    {
+        get => combatMode;
+        set
+        {
+            combatMode = value;
+
+            //没有目标敌人就始终无法进入战斗模式
+            if(TargetEnemy == null)
+                combatMode = false;
+
+            animator.SetBool("combatMode", combatMode);
+        }
+    }
 
     private MeeleFighter meeleFighter;
     private Animator animator;
@@ -15,17 +45,45 @@ public class CombatController : MonoBehaviour
         cam = Camera.main.GetComponent<CameraController>();
     }
 
+    void Start()
+    {
+        //玩家受击后 切换目标敌人
+        meeleFighter.OnGoHit += (MeeleFighter attacker) =>
+        {
+            //锁敌状态下才可以 注意高光变化
+            if(CombatMode && attacker != TargetEnemy.Fighter)
+            {
+                TargetEnemy.MeshHighlighter?.HighlightMesh(false);
+                TargetEnemy = attacker.GetComponent<EnemyController>();
+                TargetEnemy.MeshHighlighter?.HighlightMesh(true);
+            }
+        };
+    }
+
     void Update()
     {
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) && !meeleFighter.IsTakingHit /*不在受击状态下才可以攻击*/)
         {
             var enemy = EnemyManager.Instance.GetAttackingEnemy();
             if(enemy != null && enemy.Fighter.IsCounterable && !meeleFighter.InAction && meeleFighter.InVisionToCounter(enemy))
             {
                 StartCoroutine(meeleFighter.PerformCounterAttack(enemy));
             }
+            else
+            {
+                //攻击输入方向上最近的敌人 玩家受击时，找的最近敌人方向是受击后的面朝向
+                var enemyToAttack = EnemyManager.Instance.GetClosesEnemyToDirection(PlayerController.Instance.GetIntentDirection());
 
-            meeleFighter.TryToAttack();
+                meeleFighter.TryToAttack(enemyToAttack?.Fighter);
+                //攻击敌人也将锁敌
+                //CombatMode = true;
+            }
+        }
+
+        //按F键进行锁敌
+        if (Input.GetKeyDown(KeyCode.F))
+        {
+            CombatMode = !CombatMode;
         }
     }
 
@@ -48,8 +106,17 @@ public class CombatController : MonoBehaviour
     /// <returns></returns>
     public Vector3 GetTargetingDir()
     {
-        var vecFromCam = transform.position - cam.transform.position;
-        vecFromCam.y = 0;
-        return vecFromCam.normalized;
+        //没有锁敌的情况下 才会找玩家视线方向来锁定最近的敌人
+        if(!CombatMode)
+        {
+            var vecFromCam = transform.position - cam.transform.position;
+            vecFromCam.y = 0;
+            return vecFromCam.normalized;
+        }
+        //有锁敌的情况下 用玩家面朝向来锁敌
+        else
+        {
+            return transform.forward;
+        }
     }
 }
