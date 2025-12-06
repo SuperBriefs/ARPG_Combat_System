@@ -17,6 +17,8 @@ public class IdleState : State<EnemyController>
         enemy.Target = enemy.FindTarget();
         if(enemy.Target != null)
         {
+            //追击前先警示周围敌人
+            enemy.AlertNearbyEnemies();
             enemy.ChangeState(EnemyStates.CombatMovement);
         }
     }

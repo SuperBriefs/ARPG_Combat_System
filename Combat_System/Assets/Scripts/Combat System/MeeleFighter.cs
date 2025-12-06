@@ -7,6 +7,7 @@ public enum AttackState { Idle, Windup, Impact, Cooldown};
 
 public class MeeleFighter : MonoBehaviour
 {
+    [field : SerializeField] public float Health { get; private set; } = 25f;
     [SerializeField] private GameObject sword;
 
     [SerializeField] private List<AttackData> attacks;
@@ -61,7 +62,10 @@ public class MeeleFighter : MonoBehaviour
     /// 尝试进行攻击
     /// </summary>
     public void TryToAttack(MeeleFighter target = null)
-    {
+    {   
+        //角色死亡禁止攻击
+        if(Health <= 0) return;
+
         //敌人没有跑酷系统
         if (!inAction && (parkourController == null || !parkourController.InAction))
         {
@@ -229,9 +233,37 @@ public class MeeleFighter : MonoBehaviour
             return;
         }
 
-        StartCoroutine(PlayHitReaction(attacker));
+        TakeDamage(5f);
+
+        //进入受击后的击晕状态 敌人执行
+        //进入受击后切换目标 玩家执行
+        //在这还可以判断是否死亡 从而进入敌人的死亡状态
+        OnGoHit?.Invoke(attacker);
+
+        if(Health > 0)
+        {
+            StartCoroutine(PlayHitReaction(attacker));
+        }
+        else
+        {
+            PlayDeathAniamtion(attacker);
+        }
     }
 
+    /// <summary>
+    /// 受伤
+    /// </summary>
+    /// <param name="damage"></param>
+    private void TakeDamage(float damage)
+    {
+        Health = Mathf.Clamp(Health - damage, 0, Health);
+    }
+
+    /// <summary>
+    /// 受击
+    /// </summary>
+    /// <param name="attacker"></param>
+    /// <returns></returns>
     IEnumerator PlayHitReaction(MeeleFighter attacker)
     {
         inAction = true;
@@ -244,10 +276,6 @@ public class MeeleFighter : MonoBehaviour
         var dispVec = attacker.transform.position - transform.position;
         dispVec.y = 0;
         transform.rotation = Quaternion.LookRotation(dispVec);
-
-        //进入受击后的击晕状态 敌人执行
-        //进入受击后切换目标 玩家执行
-        OnGoHit?.Invoke(attacker);
 
         animator.CrossFade("SwordImpact", 0.2f);
         yield return null;
@@ -263,6 +291,15 @@ public class MeeleFighter : MonoBehaviour
 
         inAction = false;
         IsTakingHit = false;
+    }
+
+    /// <summary>
+    /// 死亡动画
+    /// </summary>
+    /// <param name="attacker"></param>
+    private void PlayDeathAniamtion(MeeleFighter attacker)
+    {
+        animator.CrossFade("FallBackDeath", 0.2f);
     }
 
     /// <summary>

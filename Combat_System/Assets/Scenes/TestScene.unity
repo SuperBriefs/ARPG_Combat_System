@@ -441,6 +441,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   timeRangeBetweenAttacks: {x: 1, y: 4}
   player: {fileID: 846688437}
+  <EnemyLayer>k__BackingField:
+    serializedVersion: 2
+    m_Bits: 256
 --- !u!4 &168058289
 Transform:
   m_ObjectHideFlags: 0
@@ -1005,6 +1008,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: af8b5ef50e7a84f4b9848657bed52c0c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  <Health>k__BackingField: 50
   sword: {fileID: 738461344}
   attacks:
   - {fileID: 11400000, guid: 69ac952fd7818b64384e596b44f39483, type: 2}

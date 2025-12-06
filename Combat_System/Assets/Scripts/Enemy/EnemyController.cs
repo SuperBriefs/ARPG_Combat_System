@@ -8,6 +8,8 @@ public class EnemyController : MonoBehaviour
 {
     [field: SerializeField] public float Fov { get; private set; } = 180;
 
+    [field: SerializeField] public float AlertRange{ get; private set; } = 20f;
+
     public List<MeeleFighter> TargetsInRange { get; set; } = new List<MeeleFighter>();
     public MeeleFighter Target { get; set; }
     public float CombatMovementTimer { get; set; } = 0;
@@ -43,7 +45,24 @@ public class EnemyController : MonoBehaviour
         StateMachine = new StateMachine<EnemyController>(this);
         StateMachine.ChangeState(stateDic[EnemyStates.Idle]);
 
-        Fighter.OnGoHit += (MeeleFighter attacker) => ChangeState(EnemyStates.GettingHit);;
+        Fighter.OnGoHit += (MeeleFighter attacker) => 
+        {
+            if(Fighter.Health > 0)
+            {
+                //受击后设置目标并警示周围敌人 避免击退状态结束后进入战斗运动状态没有目标
+                if(Target == null)
+                {
+                    Target = attacker;
+                    AlertNearbyEnemies();
+                }
+
+                ChangeState(EnemyStates.GettingHit);
+            }
+            else
+            {
+                ChangeState(EnemyStates.Dead);
+            }
+        };
     }
 
     /// <summary>
@@ -83,6 +102,13 @@ public class EnemyController : MonoBehaviour
         float strafeSpeed = Mathf.Sin(angle * Mathf.Deg2Rad);
         Animator.SetFloat("strafeSpeed", strafeSpeed, 0.2f, Time.deltaTime);
 
+        //玩家死亡 敌人不再追击 敌人也不再是玩家可攻击的对象
+        if(Target?.Health <= 0)
+        {
+            TargetsInRange.Remove(Target);
+            EnemyManager.Instance.RemoveEnemyInRange(this);
+        }
+
         prevPos = transform.position;
     }
 
@@ -105,5 +131,29 @@ public class EnemyController : MonoBehaviour
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// 警示临近敌人
+    /// </summary>
+    public void AlertNearbyEnemies()
+    {
+        var colliders = Physics.OverlapBox(transform.position, new Vector3(AlertRange / 2f, 1, AlertRange / 2f), 
+                           Quaternion.identity, EnemyManager.Instance.EnemyLayer);
+
+        foreach(var collider in colliders)
+        {
+            //忽略当前正在警示的敌人
+            if(collider.gameObject == gameObject) continue;
+
+            var nearbyEnemy = collider.GetComponent<EnemyController>();
+            //警示周围在等待状态的敌人
+            if(nearbyEnemy != null && nearbyEnemy.Target == null && nearbyEnemy.IsInState(EnemyStates.Idle))
+            {
+                //让临近的敌人一起追击玩家
+                nearbyEnemy.Target = Target;
+                nearbyEnemy.ChangeState(EnemyStates.CombatMovement);
+            }
+        }
     }
 }

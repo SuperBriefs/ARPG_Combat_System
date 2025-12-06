@@ -49,12 +49,20 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        //当攻击正在进行时，停止人物的逻辑
-        if (meeleFighter.InAction)
+        //当攻击正在进行 或 人物生命小于等于0时，停止人物的逻辑
+        if (meeleFighter.InAction || meeleFighter.Health <= 0)
         {
             //玩家进行反击的时候 角度的旋转得记录下来
             targetRotation = transform.rotation;
             animator.SetFloat("forwardSpeed", 0);
+
+            if(meeleFighter.Health <= 0)
+            {
+                //玩家死亡后解锁鼠标
+                Cursor.visible = true;
+                Cursor.lockState = CursorLockMode.None;
+            }
+
             return;
         }
 

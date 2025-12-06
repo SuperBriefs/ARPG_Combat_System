@@ -31,14 +31,22 @@ public class CombatMovementState : State<EnemyController>
     public override void Execute()
     {
         //受击后先找到追击目标 避免enemy.Target为null导致报错
-        if(enemy.Target == null)
+        // if(enemy.Target == null)
+        // {
+        //     enemy.Target = enemy.FindTarget();
+        //     if(enemy.Target == null)
+        //     {
+        //         enemy.ChangeState(EnemyStates.Idle);
+        //         return;
+        //     }
+        // }
+
+        //玩家死亡 敌人回到等待状态
+        if(enemy.Target?.Health <= 0)
         {
-            enemy.Target = enemy.FindTarget();
-            if(enemy.Target == null)
-            {
-                enemy.ChangeState(EnemyStates.Idle);
-                return;
-            }
+            enemy.Target = null;
+            enemy.ChangeState(EnemyStates.Idle);
+            return;
         }
 
         // +adjustDistanceThreashold 是为了预留一些空间 因为玩家一超过distanceToStand距离，敌人直接就追击是不自然的
